@@ -1,0 +1,12 @@
+{
+	"name": "sider",
+	"version": "1.0.0",
+	"private": true,
+	"dependencies": {
+		"ws": "^8.13.0"
+	},
+	"devDependencies": {
+		"eslint": "^8.15.0",
+		"eslint-config-protop": "^1.0.0"
+	}
+}
