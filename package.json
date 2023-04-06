@@ -1,12 +1,14 @@
 {
 	"name": "sider",
 	"version": "1.0.0",
-	"private": true,
+	"homepage": "https://github.com/lis355/sider",
+	"license": "MIT",
 	"dependencies": {
+		"lodash": "^4.17.21",
 		"ws": "^8.13.0"
 	},
 	"devDependencies": {
-		"eslint": "^8.15.0",
+		"eslint": "^8.37.0",
 		"eslint-config-protop": "^1.0.0"
 	}
 }

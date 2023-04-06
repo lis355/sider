@@ -1,5 +1,7 @@
 const EventEmitter = require("events");
 
+const _ = require("lodash");
+
 const Frame = require("./Frame");
 const Network = require("./Network");
 const Input = require("./Input");
@@ -28,7 +30,7 @@ module.exports = class Page extends EventEmitter {
 
 			this.cdp.on("Page.frameNavigated", params => {
 				const frame = this.frames.get(params.frame.id);
-				app.libs._.assign(frame.info, params.frame);
+				_.assign(frame.info, params.frame);
 
 				if (frame === this.mainFrame) {
 					this.emit("navigated");
@@ -150,7 +152,7 @@ module.exports = class Page extends EventEmitter {
 	}
 
 	async evaluateInFrame({ frame, func, returnByValue = true, args = [] }) {
-		// app.log.info(`evaluateInFrame ${String(func)} ${args.map(String).join()}`);
+		// console.log(`evaluateInFrame ${String(func)} ${args.map(String).join()}`);
 
 		if (!frame) throw new Error("No frame");
 
@@ -166,7 +168,7 @@ module.exports = class Page extends EventEmitter {
 	}
 
 	async evaluateInExecutionContext({ executionContextId, func, returnByValue = true, args = [] }) {
-		// app.log.info(`evaluateInExecutionContext ${executionContextId} ${String(func)} ${args.map(String).join()}`);
+		// console.log(`evaluateInExecutionContext ${executionContextId} ${String(func)} ${args.map(String).join()}`);
 
 		const result = await this.cdp.send("Runtime.callFunctionOn", {
 			executionContextId,
@@ -176,7 +178,7 @@ module.exports = class Page extends EventEmitter {
 			awaitPromise: true
 		});
 
-		// app.log.info(app.tools.json.format(result));
+		// console.log(JSON.stringify(result, null, "\t"));
 
 		if (result.result.subtype === "error") throw new Error(result.result.description);
 

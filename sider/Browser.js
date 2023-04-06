@@ -2,6 +2,8 @@ const { spawn } = require("child_process");
 const readline = require("readline");
 const EventEmitter = require("events");
 
+const _ = require("lodash");
+
 const { CDP } = require("./CDP");
 const Page = require("./Page");
 
@@ -38,7 +40,7 @@ module.exports = class Browser extends EventEmitter {
 	async launch(options) {
 		options.args.set("--remote-debugging-port", 0);
 
-		// app.log.info(`BROWSER ${options.executablePath}${app.os.EOL}${options.args.toArray().join(app.os.EOL)}`);
+		// console.log(`BROWSER ${options.executablePath}${os.EOL}${options.args.toArray().join(os.EOL)}`);
 
 		this.browserProcess = spawn(options.executablePath, options.args.toArray(), {
 			// env: process.env
@@ -223,10 +225,10 @@ module.exports = class Browser extends EventEmitter {
 	// OPTIONS
 
 	get optionEnableRuntime() {
-		return app.libs._.get(this.options, "enableRuntime", true);
+		return _.get(this.options, "enableRuntime", true);
 	}
 
 	get optionHandleAuthRequests() {
-		return app.libs._.get(this.options, "handleAuthRequests", true);
+		return _.get(this.options, "handleAuthRequests", true);
 	}
 };

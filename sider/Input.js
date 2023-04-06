@@ -11,6 +11,10 @@ function getRandomTimeoutInMilliseconds(base, random) {
 	return base + Math.floor((Math.random() - 0.5) * random * 2);
 }
 
+function delay(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 module.exports = class Input {
 	constructor(page) {
 		this.page = page;
@@ -35,7 +39,7 @@ module.exports = class Input {
 			await this.keyPress(text[i]);
 
 			if (i < text.length - 1) {
-				await app.tools.delay(getRandomTimeoutInMilliseconds(TYPE_TEXT_TIMEOUT_IN_MILLISECONDS, TYPE_TEXT_TIMEOUT_RANDOM_IN_MILLISECONDS));
+				await delay(getRandomTimeoutInMilliseconds(TYPE_TEXT_TIMEOUT_IN_MILLISECONDS, TYPE_TEXT_TIMEOUT_RANDOM_IN_MILLISECONDS));
 			}
 		}
 	}
@@ -72,7 +76,7 @@ module.exports = class Input {
 
 	async keyPress(key) {
 		await this.keyDown(key);
-		await app.tools.delay(getRandomTimeoutInMilliseconds(PRESS_KEY_TIMEOUT_IN_MILLISECONDS, PRESS_KEY_TIMEOUT_RANDOM_IN_MILLISECONDS));
+		await delay(getRandomTimeoutInMilliseconds(PRESS_KEY_TIMEOUT_IN_MILLISECONDS, PRESS_KEY_TIMEOUT_RANDOM_IN_MILLISECONDS));
 		await this.keyUp(key);
 	}
 
@@ -106,7 +110,7 @@ module.exports = class Input {
 
 	async mouseClick(x, y, clickCount = 1) {
 		await this.mouseDown(x, y, clickCount);
-		await app.tools.delay(getRandomTimeoutInMilliseconds(PRESS_MOUSE_TIMEOUT_IN_MILLISECONDS, PRESS_MOUSE_TIMEOUT_RANDOM_IN_MILLISECONDS));
+		await delay(getRandomTimeoutInMilliseconds(PRESS_MOUSE_TIMEOUT_IN_MILLISECONDS, PRESS_MOUSE_TIMEOUT_RANDOM_IN_MILLISECONDS));
 		await this.mouseUp(x, y, clickCount);
 	}
 

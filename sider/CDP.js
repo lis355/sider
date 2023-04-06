@@ -11,7 +11,7 @@ class CDP extends EventEmitter {
 		this.browser = browser;
 		this.endpoint = endpoint;
 
-		// app.log.info(`WS ${this.endpoint}`);
+		// console.log(`WS ${this.endpoint}`);
 	}
 
 	async initialize() {
@@ -47,17 +47,17 @@ class CDP extends EventEmitter {
 			const currentId = this.id = (this.id || 0) + 1;
 
 			const command = { id: this.id, method, sessionId, params };
-			// app.log.info("SEND " + app.tools.json.format(command));
+			// console.log("SEND " + JSON.stringify(command, null, "\t"));
 
-			this.ws.send(app.tools.json.format(command, null));
+			this.ws.send(JSON.stringify(command));
 
 			this.callbacks.set(currentId, { command, resolve, reject });
 		});
 	}
 
 	handleMessage(message) {
-		const object = app.tools.json.parse(message);
-		// app.log.info("RECIEVE " + app.tools.json.format(object));
+		const object = JSON.parse(message);
+		// console.log("RECIEVE " + JSON.stringify(object, null, "\t"));
 
 		const { error, id, sessionId, method, params } = object;
 		if (id) {

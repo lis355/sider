@@ -7,8 +7,8 @@ const sider = require("./sider");
 	const args = new CLIArguments();
 
 	args.parseArrayArguments([
-		"--start-maximized",
-		"--restore-last-session"
+		"--start-maximized"
+		// "--restore-last-session"
 	]);
 
 	args.set("--user-data-dir", path.resolve(__dirname, "userData", "browserData"));
@@ -23,7 +23,6 @@ const sider = require("./sider");
 	});
 
 	browser.on("closed", () => {
-		app.quit();
 	});
 
 	await browser.initialize();
@@ -31,12 +30,13 @@ const sider = require("./sider");
 	const page = await new Promise(resolve => {
 		browser.once("pageAdded", page => {
 			page.network.responseHandler = params => {
-				console.log(params);
+				const url = new URL(params.request.url);
+				console.log(url.pathname);
 			};
 
 			return resolve(page);
 		});
 	});
 
-	await page.navigate("https://github.com/lis355/sider");
+	await page.navigate(require("./package.json").homepage);
 })();
