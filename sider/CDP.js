@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 
 const ws = require("ws");
 
+const SiderError = require("./Error");
 const Target = require("./Target");
 
 class CDP extends EventEmitter {
@@ -41,7 +42,7 @@ class CDP extends EventEmitter {
 	}
 
 	async send({ method, sessionId, params }) {
-		if (!method) throw new Error("No method");
+		if (!method) throw new SiderError("No method", { sessionId, params });
 
 		return new Promise((resolve, reject) => {
 			const currentId = this.id = (this.id || 0) + 1;
@@ -62,17 +63,17 @@ class CDP extends EventEmitter {
 		const { error, id, sessionId, method, params } = object;
 		if (id) {
 			const callback = this.callbacks.get(id);
-			if (!callback) throw new Error(`No callback to id ${id}`);
+			if (!callback) throw new SiderError(`No callback to id ${id}`, id);
 
 			this.callbacks.delete(object.id);
 
 			if (error) {
-				callback.reject(this.createErrorFromData(error, callback.command));
+				callback.reject(this.createError(error, callback.command));
 			} else {
 				callback.resolve(object.result);
 			}
 		} else if (error) {
-			throw this.createErrorFromData(error);
+			throw this.createError(error);
 		} else if (method === "Target.attachedToTarget") {
 			const sessionId = params.sessionId;
 			const target = this.rootSession.targets.get(params.targetInfo.targetId);
@@ -90,7 +91,7 @@ class CDP extends EventEmitter {
 		} else if (method === "Target.detachedFromTarget") {
 			const sessionId = params.sessionId;
 			const session = this.sessions.get(sessionId);
-			if (!session) throw new Error(`No session to id ${session}`);
+			if (!session) throw new SiderError(`No session to id ${session}`, session);
 
 			session.target.handleDetached();
 			this.sessions.delete(sessionId);
@@ -102,17 +103,14 @@ class CDP extends EventEmitter {
 			// }
 		} else {
 			const session = this.sessions.get(sessionId);
-			if (!session) throw new Error(`No session to id ${session}`);
+			if (!session) throw new SiderError(`No session to id ${session}`, session);
 
 			session.handleMessage(object);
 		}
 	}
 
-	createErrorFromData(errorData, command) {
-		const error = new Error(`${errorData.message} (${JSON.stringify(command)})`);
-		error.data = { ...errorData, command };
-
-		return error;
+	createError(errorData, command) {
+		return new SiderError(errorData.message, { ...errorData, command });
 	}
 }
 

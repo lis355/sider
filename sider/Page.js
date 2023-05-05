@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 
 const _ = require("lodash");
 
+const SiderError = require("./Error");
 const Frame = require("./Frame");
 const Network = require("./Network");
 const Input = require("./Input");
@@ -102,7 +103,7 @@ module.exports = class Page extends EventEmitter {
 					new URL(params.request.url).href === new URL(url).href) {
 					unregisterCallbacks();
 
-					return reject(new Error("Connection error"));
+					return reject(new SiderError("Connection error"));
 				}
 			};
 
@@ -154,10 +155,10 @@ module.exports = class Page extends EventEmitter {
 	async evaluateInFrame({ frame, func, returnByValue = true, args = [] }) {
 		// console.log(`evaluateInFrame ${String(func)} ${args.map(String).join()}`);
 
-		if (!frame) throw new Error("No frame");
+		if (!frame) throw new SiderError("No frame");
 
 		const executionContext = frame.executionContext;
-		if (!executionContext) throw new Error("No executionContext");
+		if (!executionContext) throw new SiderError("No executionContext");
 
 		return this.evaluateInExecutionContext({
 			executionContextId: executionContext.id,
@@ -180,7 +181,7 @@ module.exports = class Page extends EventEmitter {
 
 		// console.log(JSON.stringify(result, null, "\t"));
 
-		if (result.result.subtype === "error") throw new Error(result.result.description);
+		if (result.result.subtype === "error") throw new SiderError(result.result.description);
 
 		const value = returnByValue ? result.result.value : result.result;
 

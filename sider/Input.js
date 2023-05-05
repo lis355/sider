@@ -1,3 +1,5 @@
+const SiderError = require("./Error");
+
 const PRESS_MOUSE_TIMEOUT_IN_MILLISECONDS = 50;
 const PRESS_MOUSE_TIMEOUT_RANDOM_IN_MILLISECONDS = 10;
 
@@ -33,7 +35,7 @@ module.exports = class Input {
 	// }
 
 	async type(text) {
-		if (typeof text !== "string") throw new Error("Type not a string");
+		if (typeof text !== "string") throw new SiderError("Type not a string", text);
 
 		for (let i = 0; i < text.length; i++) {
 			await this.keyPress(text[i]);
@@ -127,7 +129,7 @@ module.exports = class Input {
 
 function getKeyEventDataForChar(char) {
 	const definition = KEYS[char];
-	if (!definition) throw new Error(`No info for char ${char}`);
+	if (!definition) throw new SiderError(`No info for char ${char}`, char);
 
 	const description = {
 		modifiers: 0 // NOTE какая то сложная логика в пупитре, пока оставим так
