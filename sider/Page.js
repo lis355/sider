@@ -14,6 +14,8 @@ module.exports = class Page extends EventEmitter {
 		this.browser = browser;
 		this.target = target;
 
+		this.initialized = false;
+
 		this.frames = new Map();
 		this.executionContexts = new Map();
 		this.executionContextsByFrameId = new Map();
@@ -70,16 +72,22 @@ module.exports = class Page extends EventEmitter {
 	}
 
 	async initialize() {
-		await this.browser.cdp.rootSession.send("Target.attachToTarget", { targetId: this.target.targetId, flatten: true });
+		try {
+			await this.browser.cdp.rootSession.send("Target.attachToTarget", { targetId: this.target.targetId, flatten: true });
+		} catch (error) {
+			if (this.removedFromBrowser) return;
+
+			throw error;
+		}
 
 		await this.cdp.send("Page.enable");
 
-		if (this.browser.optionEnableRuntime) {
-			await this.cdp.send("Runtime.enable");
-		}
+		if (this.browser.optionEnableRuntime) await this.cdp.send("Runtime.enable");
 
 		await this.network.initialize();
 		await this.input.initialize();
+
+		this.initialized = true;
 	}
 
 	async navigate(url) {

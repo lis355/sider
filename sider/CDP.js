@@ -5,7 +5,9 @@ const ws = require("ws");
 const SiderError = require("./Error");
 const Target = require("./Target");
 
-class CDP extends EventEmitter {
+const CDP_LOG = false;
+
+module.exports = class CDP extends EventEmitter {
 	constructor(browser, endpoint) {
 		super();
 
@@ -48,7 +50,7 @@ class CDP extends EventEmitter {
 			const currentId = this.id = (this.id || 0) + 1;
 
 			const command = { id: this.id, method, sessionId, params };
-			// console.log("SEND " + JSON.stringify(command, null, "\t"));
+			if (CDP_LOG) console.log("SEND " + JSON.stringify(command, null, "\t"));
 
 			this.ws.send(JSON.stringify(command));
 
@@ -58,7 +60,7 @@ class CDP extends EventEmitter {
 
 	handleMessage(message) {
 		const object = JSON.parse(message);
-		// console.log("RECIEVE " + JSON.stringify(object, null, "\t"));
+		if (CDP_LOG) console.log("RECIEVE " + JSON.stringify(object, null, "\t"));
 
 		const { error, id, sessionId, method, params } = object;
 		if (id) {
@@ -112,7 +114,7 @@ class CDP extends EventEmitter {
 	createError(errorData, command) {
 		return new SiderError(errorData.message, { ...errorData, command });
 	}
-}
+};
 
 class CDPSession extends EventEmitter {
 	constructor(cdp, sessionId, target) {
@@ -161,8 +163,4 @@ class CDPRootSession extends CDPSession {
 			this.emit("targetDestroyed", target);
 		});
 	}
-}
-
-module.exports = {
-	CDP
 };
