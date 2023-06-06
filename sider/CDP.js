@@ -5,7 +5,8 @@ const ws = require("ws");
 const SiderError = require("./Error");
 const Target = require("./Target");
 
-const CDP_LOG = false;
+const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
+	process.env.SIDER_DEBUG.includes("cdp");
 
 module.exports = class CDP extends EventEmitter {
 	constructor(browser, endpoint) {
@@ -14,7 +15,7 @@ module.exports = class CDP extends EventEmitter {
 		this.browser = browser;
 		this.endpoint = endpoint;
 
-		// console.log(`WS ${this.endpoint}`);
+		if (printDebugLog) console.log(`Sider CDP ws: ${this.endpoint}`);
 	}
 
 	async initialize() {
@@ -50,7 +51,7 @@ module.exports = class CDP extends EventEmitter {
 			const currentId = this.id = (this.id || 0) + 1;
 
 			const command = { id: this.id, method, sessionId, params };
-			if (CDP_LOG) console.log("SEND " + JSON.stringify(command, null, "\t"));
+			if (printDebugLog) console.log("Sider CDP SEND: " + JSON.stringify(command, null, "\t"));
 
 			this.ws.send(JSON.stringify(command));
 
@@ -60,7 +61,7 @@ module.exports = class CDP extends EventEmitter {
 
 	handleMessage(message) {
 		const object = JSON.parse(message);
-		if (CDP_LOG) console.log("RECIEVE " + JSON.stringify(object, null, "\t"));
+		if (printDebugLog) console.log("Sider CDP RECIEVE: " + JSON.stringify(object, null, "\t"));
 
 		const { error, id, sessionId, method, params } = object;
 		if (id) {

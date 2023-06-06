@@ -3,6 +3,9 @@ const EventEmitter = require("events");
 let invalidInterceptionIdErrorShowed = false;
 let sessionWithGivenIdNotFoundErrorShowed = false;
 
+const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
+	process.env.SIDER_DEBUG.includes("network");
+
 module.exports = class Network extends EventEmitter {
 	constructor(page) {
 		super();
@@ -132,8 +135,8 @@ module.exports = class Network extends EventEmitter {
 			if (!invalidInterceptionIdErrorShowed) {
 				invalidInterceptionIdErrorShowed = true;
 
-				console.log(`Invalid InterceptionId error on ${error.data.command.params.requestId}`);
-				// console.log(this.debugPausedRequests[error.data.command.params.requestId]);
+				if (printDebugLog) console.log(`Invalid InterceptionId error on ${error.data.command.params.requestId}`);
+				// if (printDebugLog) console.log(this.debugPausedRequests[error.data.command.params.requestId]);
 			}
 		} else if (error.message.includes("Session with given id not found")) {
 			// обычно происходит, когда закрывается ВНЕЗАПНО вкладка
@@ -141,7 +144,7 @@ module.exports = class Network extends EventEmitter {
 			if (!sessionWithGivenIdNotFoundErrorShowed) {
 				sessionWithGivenIdNotFoundErrorShowed = true;
 
-				console.log(`Session with given id not found error on ${error.data.command.params.requestId}`);
+				if (printDebugLog) console.log(`Session with given id not found error on ${error.data.command.params.requestId}`);
 			}
 		} else {
 			throw error;

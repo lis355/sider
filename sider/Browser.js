@@ -11,6 +11,9 @@ const Page = require("./Page");
 const PAGE_OPEN_AND_CLOSE_REASON_USER = "user";
 const PAGE_OPEN_AND_CLOSE_REASON_PROGRAM = "program";
 
+const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
+	process.env.SIDER_DEBUG.includes("browser");
+
 async function getWSEndpoint(browserProcess) {
 	return new Promise((resolve, reject) => {
 		const stdErrReader = readline.createInterface({ input: browserProcess.stderr });
@@ -44,7 +47,7 @@ module.exports = class Browser extends EventEmitter {
 	async launch(options) {
 		options.args.set("--remote-debugging-port", 0);
 
-		// console.log(`BROWSER ${options.executablePath}${os.EOL}${options.args.toArray().join(os.EOL)}`);
+		if (printDebugLog) console.log(`Sider browser: ${options.executablePath}\n${options.args.toArray().join("\n")}`);
 
 		this.browserProcess = spawn(options.executablePath, options.args.toArray(), {
 			// env: process.env

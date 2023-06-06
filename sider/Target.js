@@ -26,7 +26,7 @@ module.exports = class Target extends EventEmitter {
 	handleAttached(cdpSession) {
 		this.cdpSession = cdpSession;
 
-		this.emit("attached", cdpSession);
+		this.emit("attached");
 	}
 
 	handleDetached() {

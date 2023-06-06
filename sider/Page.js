@@ -7,6 +7,9 @@ const Frame = require("./Frame");
 const Network = require("./Network");
 const Input = require("./Input");
 
+const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
+	process.env.SIDER_DEBUG.includes("page");
+
 module.exports = class Page extends EventEmitter {
 	constructor(browser, target) {
 		super();
@@ -22,46 +25,49 @@ module.exports = class Page extends EventEmitter {
 
 		this.frames.set(this.target.targetId, this.mainFrame = new Frame(this, this.target.targetId, null));
 
-		this.target.on("attached", () => {
-			this.cdp.on("Page.frameAttached", params => {
-				this.frames.set(params.frameId, new Frame(this, params.frameId, params.parentFrameId));
+		this.target
+			.on("attached", () => {
+				this.cdp.on("Page.frameAttached", params => {
+					this.frames.set(params.frameId, new Frame(this, params.frameId, params.parentFrameId));
+				});
+
+				this.cdp.on("Page.frameDetached", params => {
+					this.frames.delete(params.frameId);
+				});
+
+				this.cdp.on("Page.frameNavigated", params => {
+					const frame = this.frames.get(params.frame.id);
+					_.assign(frame.info, params.frame);
+
+					if (frame === this.mainFrame) {
+						this.emit("navigated");
+					}
+				});
+
+				this.cdp.on("Runtime.executionContextCreated", params => {
+					const context = params.context;
+
+					if (context.auxData.isDefault) {
+						const frameId = context.auxData.frameId;
+						this.executionContextsByFrameId.set(frameId, context);
+					}
+
+					this.executionContexts.set(context.id, context);
+				});
+
+				this.cdp.on("Runtime.executionContextDestroyed", params => {
+					const context = this.executionContexts.get(params.executionContextId);
+
+					if (context.auxData.isDefault) {
+						const frameId = context.auxData.frameId;
+						this.executionContextsByFrameId.delete(frameId);
+					}
+
+					this.executionContexts.delete(context.id);
+				});
+			})
+			.on("detached", () => {
 			});
-
-			this.cdp.on("Page.frameDetached", params => {
-				this.frames.delete(params.frameId);
-			});
-
-			this.cdp.on("Page.frameNavigated", params => {
-				const frame = this.frames.get(params.frame.id);
-				_.assign(frame.info, params.frame);
-
-				if (frame === this.mainFrame) {
-					this.emit("navigated");
-				}
-			});
-
-			this.cdp.on("Runtime.executionContextCreated", params => {
-				const context = params.context;
-
-				if (context.auxData.isDefault) {
-					const frameId = context.auxData.frameId;
-					this.executionContextsByFrameId.set(frameId, context);
-				}
-
-				this.executionContexts.set(context.id, context);
-			});
-
-			this.cdp.on("Runtime.executionContextDestroyed", params => {
-				const context = this.executionContexts.get(params.executionContextId);
-
-				if (context.auxData.isDefault) {
-					const frameId = context.auxData.frameId;
-					this.executionContextsByFrameId.delete(frameId);
-				}
-
-				this.executionContexts.delete(context.id);
-			});
-		});
 
 		this.network = new Network(this);
 		this.input = new Input(this);
@@ -161,7 +167,7 @@ module.exports = class Page extends EventEmitter {
 	}
 
 	async evaluateInFrame({ frame, func, returnByValue = true, args = [] }) {
-		// console.log(`evaluateInFrame ${String(func)} ${args.map(String).join()}`);
+		if (printDebugLog) console.log(`evaluateInFrame ${String(func)} ${args.map(String).join()}`);
 
 		if (!frame) throw new SiderError("No frame");
 
@@ -177,7 +183,7 @@ module.exports = class Page extends EventEmitter {
 	}
 
 	async evaluateInExecutionContext({ executionContextId, func, returnByValue = true, args = [] }) {
-		// console.log(`evaluateInExecutionContext ${executionContextId} ${String(func)} ${args.map(String).join()}`);
+		if (printDebugLog) console.log(`evaluateInExecutionContext ${executionContextId} ${String(func)} ${args.map(String).join()}`);
 
 		const result = await this.cdp.send("Runtime.callFunctionOn", {
 			executionContextId,
@@ -187,7 +193,7 @@ module.exports = class Page extends EventEmitter {
 			awaitPromise: true
 		});
 
-		// console.log(JSON.stringify(result, null, "\t"));
+		if (printDebugLog) console.log(JSON.stringify(result, null, "\t"));
 
 		if (result.result.subtype === "error") throw new SiderError(result.result.description);
 

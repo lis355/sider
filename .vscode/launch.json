@@ -14,7 +14,8 @@
 			"program": "${workspaceFolder}/main.js",
 			"args": [],
 			"env": {
-				"DEBUG": "*"
+				"DEBUG": "*",
+				"SIDER_DEBUG": "browser"
 			}
 		}
 	]
