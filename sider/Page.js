@@ -6,6 +6,7 @@ const SiderError = require("./Error");
 const Frame = require("./Frame");
 const Network = require("./Network");
 const Input = require("./Input");
+const { tick, tickToMilliseconds } = require("./tools/time");
 
 const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
 	process.env.SIDER_DEBUG.includes("page");
@@ -18,6 +19,8 @@ module.exports = class Page extends EventEmitter {
 		this.target = target;
 
 		this.initialized = false;
+		this.loading = false;
+		this.loaded = false;
 
 		this.frames = new Map();
 		this.executionContexts = new Map();
@@ -37,10 +40,35 @@ module.exports = class Page extends EventEmitter {
 
 				this.cdp.on("Page.frameNavigated", params => {
 					const frame = this.frames.get(params.frame.id);
-					_.assign(frame.info, params.frame);
+					// NOTE ожидается, что frame должна быть, т.е. Page.frameAttached вызывается до Page.frameNavigated
+					// но иногда это не так
+					if (frame) {
+						_.assign(frame.info, params.frame);
 
-					if (frame === this.mainFrame) {
-						this.emit("navigated");
+						if (frame === this.mainFrame) {
+							this.emit("navigated");
+						}
+					}
+				});
+
+				this.cdp.on("Page.frameStartedLoading", params => {
+					if (params.frameId === this.mainFrame.id) {
+						this.loading = true;
+						this.loaded = false;
+
+						this.emit("startedLoading");
+					}
+				});
+
+				this.cdp.on("Page.frameStoppedLoading", params => {
+				});
+
+				this.cdp.on("Page.loadEventFired", params => {
+					if (this.loading) {
+						this.loading = false;
+						this.loaded = true;
+
+						this.emit("loaded");
 					}
 				});
 
@@ -98,15 +126,15 @@ module.exports = class Page extends EventEmitter {
 
 	async navigate(url) {
 		await Promise.all([
-			this.cdp.send("Page.navigate", { url }),
-			this.waitForNavigation(url)
+			this.cdp.send("Page.navigate", { url })
+			// this.waitForNavigation(url)
 		]);
 	}
 
 	async reload() {
 		await Promise.all([
-			this.cdp.send("Page.reload"),
-			this.waitForNavigation(this.mainFrame.url)
+			this.cdp.send("Page.reload")
+			// this.waitForNavigation(this.mainFrame.url)
 		]);
 	}
 
@@ -117,7 +145,7 @@ module.exports = class Page extends EventEmitter {
 					new URL(params.request.url).href === new URL(url).href) {
 					unregisterCallbacks();
 
-					return reject(new SiderError("Connection error"));
+					return reject(new SiderError("Connection error", { responseErrorReason: params.responseErrorReason }));
 				}
 			};
 
@@ -185,6 +213,10 @@ module.exports = class Page extends EventEmitter {
 	async evaluateInExecutionContext({ executionContextId, func, returnByValue = true, args = [] }) {
 		if (printDebugLog) console.log(`evaluateInExecutionContext ${executionContextId} ${String(func)} ${args.map(String).join()}`);
 
+		if (!this.cdp) throw new SiderError("No cdpSession");
+
+		const lastTick = tick();
+
 		const result = await this.cdp.send("Runtime.callFunctionOn", {
 			executionContextId,
 			functionDeclaration: String(func),
@@ -192,6 +224,8 @@ module.exports = class Page extends EventEmitter {
 			returnByValue,
 			awaitPromise: true
 		});
+
+		this.lastEvaluateTimeInMilliseconds = tickToMilliseconds(tick(lastTick));
 
 		if (printDebugLog) console.log(JSON.stringify(result, null, "\t"));
 

@@ -74,30 +74,6 @@ module.exports = class Network extends EventEmitter {
 						.catch(this.handleContinueRequestOrResponseError.bind(this));
 				}
 			}
-
-			// if (params.responseErrorReason) {
-			// 	this.emit("response", params);
-
-			// 	if (params.responseErrorReason !== "Failed") {
-			// 		this.cdp.send("Fetch.continueRequest", { requestId: params.requestId });
-			// 	}
-			// } else if (params.responseStatusCode ||
-			// 	params.responseStatusText) {
-			// 	this.emit("response", params);
-
-			// 	this.cdp.send("Fetch.continueRequest", { requestId: params.requestId });
-			// } else {
-			// 	const request = params.request;
-
-			// 	this.emit("request", request);
-
-			// 	let passed = this.requestFilter ? this.requestFilter(request) : true;
-			// 	if (passed) {
-			// 		this.cdp.send("Fetch.continueRequest", { requestId: params.requestId });
-			// 	} else {
-			// 		this.cdp.send("Fetch.failRequest", { requestId: params.requestId, errorReason: "Failed" });
-			// 	}
-			// }
 		});
 
 		this.cdp.on("Fetch.authRequired", params => {

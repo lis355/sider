@@ -10,8 +10,8 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"name": "start",
-			"program": "${workspaceFolder}/main.js",
+			"name": "test",
+			"program": "${workspaceFolder}/test.js",
 			"args": [],
 			"env": {
 				"DEBUG": "*",

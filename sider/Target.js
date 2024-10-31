@@ -2,6 +2,8 @@ const EventEmitter = require("events");
 
 // const _ = require("lodash");
 
+const SiderError = require("./Error");
+
 module.exports = class Target extends EventEmitter {
 	constructor(cdpRootSession, targetInfo) {
 		super();
@@ -24,12 +26,18 @@ module.exports = class Target extends EventEmitter {
 	// }
 
 	handleAttached(cdpSession) {
+		if (this.cdpSession) throw new SiderError("cdpSession is not null");
+
 		this.cdpSession = cdpSession;
 
 		this.emit("attached");
 	}
 
 	handleDetached() {
+		if (!this.cdpSession) throw new SiderError("cdpSession is null");
+
+		this.cdpSession.removeAllListeners();
+
 		this.cdpSession = null;
 
 		this.emit("detached");

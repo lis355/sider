@@ -1,21 +1,20 @@
-const path = require("path");
+const path = require("node:path");
 
-const CLIArguments = require("./sider/CLIArguments");
-const sider = require("./sider");
+const sider = require("./index");
 
 (async () => {
-	const args = new CLIArguments();
+	const args = new sider.CLIArguments();
 
 	args.parseArrayArguments([
-		"--start-maximized"
-		// "--restore-last-session"
+		// "--start-maximized"
+		"--restore-last-session"
 	]);
 
 	args.set("--user-data-dir", path.resolve(__dirname, "userData", "browserData"));
 
-	args.set("--auto-open-devtools-for-tabs");
+	// args.set("--auto-open-devtools-for-tabs");
 
-	const browser = new sider.Browser({});
+	const browser = new sider.Browser();
 
 	await browser.launch({
 		executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -31,7 +30,7 @@ const sider = require("./sider");
 		browser.once("pageAdded", page => {
 			page.network.responseHandler = params => {
 				const url = new URL(params.request.url);
-				console.log(url.pathname);
+				console.log(url.href);
 			};
 
 			return resolve(page);

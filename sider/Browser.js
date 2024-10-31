@@ -229,10 +229,10 @@ module.exports = class Browser extends EventEmitter {
 			this.browserProcess = null;
 			this.wsEndpoint = null;
 
+			this.closed = true;
+
 			this.emit("closed", this.programClose ? PAGE_OPEN_AND_CLOSE_REASON_PROGRAM : PAGE_OPEN_AND_CLOSE_REASON_USER);
 		}
-
-		this.closed = true;
 	}
 
 	// OPTIONS
