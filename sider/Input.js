@@ -1,5 +1,7 @@
 const SiderError = require("./Error");
 
+const delay = require("./tools/delay");
+
 const PRESS_MOUSE_TIMEOUT_IN_MILLISECONDS = 50;
 const PRESS_MOUSE_TIMEOUT_RANDOM_IN_MILLISECONDS = 10;
 
@@ -11,10 +13,6 @@ const TYPE_TEXT_TIMEOUT_RANDOM_IN_MILLISECONDS = 30;
 
 function getRandomTimeoutInMilliseconds(base, random) {
 	return base + Math.floor((Math.random() - 0.5) * random * 2);
-}
-
-function delay(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = class Input {

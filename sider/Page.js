@@ -236,13 +236,19 @@ module.exports = class Page extends EventEmitter {
 		return value;
 	}
 
-	async screenshot() {
+	async getCookies() {
+		const result = await this.cdp.send("Network.getCookies");
+
+		return _.get(result, "cookies", []);
+	}
+
+	async getScreenshot() {
 		const result = await this.cdp.send("Page.captureScreenshot");
 
 		return result.data;
 	}
 
-	async snapshot() {
+	async getSnapshot() {
 		const result = await this.cdp.send("Page.captureSnapshot");
 
 		return result.data;

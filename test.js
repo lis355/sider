@@ -38,4 +38,19 @@ const sider = require("./index");
 	});
 
 	await page.navigate(require("./package.json").homepage);
+
+	while (true) {
+		const hasElement = await page.evaluateInFrame({
+			frame: page.mainFrame,
+			func: () => Boolean(window.document.querySelector(".repository-content")),
+			args: []
+		});
+
+		if (hasElement) break;
+
+		// delay to prevent frequent page.evaluateInFrame calls
+		await new Promise(resolve => setTimeout(resolve, 100));
+	}
+
+	console.log("cookies", await page.getCookies());
 })();
