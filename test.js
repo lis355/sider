@@ -37,8 +37,10 @@ const sider = require("./index");
 		});
 	});
 
+	// navigate to author's page
 	await page.navigate(require("./package.json").homepage);
 
+	// wait for .repository-content element
 	while (true) {
 		const hasElement = await page.evaluateInFrame({
 			frame: page.mainFrame,
@@ -52,5 +54,6 @@ const sider = require("./index");
 		await new Promise(resolve => setTimeout(resolve, 100));
 	}
 
+	// print cookies
 	console.log("cookies", await page.getCookies());
 })();

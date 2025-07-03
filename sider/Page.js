@@ -2,11 +2,11 @@ const EventEmitter = require("events");
 
 const _ = require("lodash");
 
-const SiderError = require("./Error");
-const Frame = require("./Frame");
-const Network = require("./Network");
-const Input = require("./Input");
 const { tick, tickToMilliseconds } = require("./tools/time");
+const Frame = require("./Frame");
+const Input = require("./Input");
+const Network = require("./Network");
+const SiderError = require("./Error");
 
 const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
 	process.env.SIDER_DEBUG.includes("page");
@@ -97,7 +97,7 @@ module.exports = class Page extends EventEmitter {
 			.on("detached", () => {
 			});
 
-		this.network = new Network(this);
+		this.network = new Network(this.browser, this);
 		this.input = new Input(this);
 	}
 

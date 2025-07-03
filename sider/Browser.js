@@ -1,12 +1,13 @@
 const { spawn } = require("child_process");
-const readline = require("readline");
 const EventEmitter = require("events");
+const readline = require("readline");
 
 const _ = require("lodash");
 
-const SiderError = require("./Error");
 const CDP = require("./CDP");
 const Page = require("./Page");
+const ServiceWorker = require("./ServiceWorker");
+const SiderError = require("./Error");
 
 const PAGE_OPEN_AND_CLOSE_REASON_USER = "user";
 const PAGE_OPEN_AND_CLOSE_REASON_PROGRAM = "program";
@@ -75,6 +76,7 @@ module.exports = class Browser extends EventEmitter {
 
 	async initialize() {
 		this.pages = new Map();
+		this.serviceWorkers = new Map();
 
 		this.cdp = new CDP(this, this.wsEndpoint);
 		await this.cdp.initialize();
@@ -108,6 +110,22 @@ module.exports = class Browser extends EventEmitter {
 					break;
 				}
 
+				case "service_worker": {
+					if (!this.optionHandleServiceWorkers) break;
+
+					const serviceWorker = new ServiceWorker(this, target);
+
+					const targetId = serviceWorker.target.targetId;
+					if (this.serviceWorkers.has(targetId)) throw new SiderError("Already has serviceWorker", targetId);
+					this.serviceWorkers.set(targetId, serviceWorker);
+
+					await serviceWorker.initialize();
+
+					this.emit("serviceWorkerAdded", serviceWorker);
+
+					break;
+				}
+
 				default:
 					break;
 			}
@@ -118,6 +136,7 @@ module.exports = class Browser extends EventEmitter {
 				case "page": {
 					const targetId = target.targetId;
 					if (!this.pages.has(targetId)) throw new SiderError("No page", targetId);
+
 					const page = this.pages.get(targetId);
 					this.pages.delete(targetId);
 
@@ -130,6 +149,20 @@ module.exports = class Browser extends EventEmitter {
 
 					page.removedFromBrowser = true;
 					if (page.addedToBrowser) this.emit("pageRemoved", page, reason);
+
+					break;
+				}
+
+				case "service_worker": {
+					if (!this.optionHandleServiceWorkers) break;
+
+					const targetId = target.targetId;
+					if (!this.serviceWorkers.has(targetId)) throw new SiderError("No serviceWorker", targetId);
+
+					const serviceWorker = this.serviceWorkers.get(targetId);
+					this.serviceWorkers.delete(targetId);
+
+					this.emit("serviceWorkerRemoved", serviceWorker);
 
 					break;
 				}
@@ -243,5 +276,13 @@ module.exports = class Browser extends EventEmitter {
 
 	get optionHandleAuthRequests() {
 		return _.get(this.options, "handleAuthRequests", true);
+	}
+
+	get optionHandleWebSocketRequests() {
+		return _.get(this.options, "handleWebSocketRequests", false);
+	}
+
+	get optionHandleServiceWorkers() {
+		return _.get(this.options, "handleServiceWorkers", false);
 	}
 };

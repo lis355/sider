@@ -1,6 +1,5 @@
-const SiderError = require("./Error");
-
 const delay = require("./tools/delay");
+const SiderError = require("./Error");
 
 const PRESS_MOUSE_TIMEOUT_IN_MILLISECONDS = 50;
 const PRESS_MOUSE_TIMEOUT_RANDOM_IN_MILLISECONDS = 10;

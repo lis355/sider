@@ -1,5 +1,7 @@
 const EventEmitter = require("events");
 
+const SiderError = require("./Error");
+
 let invalidInterceptionIdErrorShowed = false;
 let sessionWithGivenIdNotFoundErrorShowed = false;
 
@@ -7,28 +9,32 @@ const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
 	process.env.SIDER_DEBUG.includes("network");
 
 module.exports = class Network extends EventEmitter {
-	constructor(page) {
+	constructor(browser, target) {
 		super();
 
-		this.page = page;
+		this.browser = browser;
+		this.target = target;
+		this.webSocketSessions = new Map();
 
 		// нельзя просто делать emit("response") потому что обработчики, в которых может быть запрошено тело запроса, будут асинхроннымы, и тогда все порушится
 		this.requestHandler = null;
 		this.responseHandler = null;
 
+		this.webSocketMessageSentHandler = null;
+		this.webSocketMessageReceivedHandler = null;
+
 		this.requestFilter = null;
 	}
 
 	get cdp() {
-		return this.page.cdp;
+		return this.target.cdp;
 	}
 
 	async initialize() {
-		// Пока что это не нужно, все обрабатывается в домэйне fetch
-		// await this.cdp.send("Network.enable");
+		if (this.browser.optionHandleWebSocketRequests) await this.subscribeOnWebSocketRequests();
 
 		await this.cdp.send("Fetch.enable", {
-			handleAuthRequests: this.page.browser.optionHandleAuthRequests,
+			handleAuthRequests: this.browser.optionHandleAuthRequests,
 			patterns: [
 				{ requestStage: "Request" },
 				{ requestStage: "Response" }
@@ -87,6 +93,51 @@ module.exports = class Network extends EventEmitter {
 		});
 	}
 
+	async subscribeOnWebSocketRequests() {
+		await this.setNetworkEnable(true);
+
+		this.cdp.on("Network.webSocketCreated", ({ requestId, url, initiator }) => {
+			if (this.webSocketSessions.has(requestId)) throw new SiderError("Already has webSocketSession", { requestId, url });
+
+			this.webSocketSessions.set(requestId, { url, initiator });
+		});
+
+		this.cdp.on("Network.webSocketClosed", ({ requestId, timestamp }) => {
+			if (!this.webSocketSessions.has(requestId)) throw new SiderError("No webSocketSession", { requestId });
+
+			this.webSocketSessions.delete(requestId);
+		});
+
+		this.cdp.on("Network.webSocketFrameSent", ({ requestId, timestamp, response }) => {
+			if (this.webSocketMessageSentHandler) {
+				const webSocketSession = this.webSocketSessions.get(requestId);
+				if (!webSocketSession) throw new SiderError("No webSocketSession", { requestId });
+
+				this.webSocketMessageSentHandler(webSocketSession.url, this.getWebSocketPayloadData(response));
+			}
+		});
+
+		this.cdp.on("Network.webSocketFrameReceived", ({ requestId, timestamp, response }) => {
+			if (this.webSocketMessageReceivedHandler) {
+				const webSocketSession = this.webSocketSessions.get(requestId);
+				if (!webSocketSession) throw new SiderError("No webSocketSession", { requestId });
+
+				this.webSocketMessageReceivedHandler(webSocketSession.url, this.getWebSocketPayloadData(response));
+			}
+		});
+	}
+
+	async setNetworkEnable(value) {
+		if (this.cdpNetworkEnable === value) return;
+
+		this.cdpNetworkEnable = value;
+		if (this.cdpNetworkEnable) {
+			await this.cdp.send("Network.enable");
+		} else {
+			await this.cdp.send("Network.disable");
+		}
+	}
+
 	async getResponseBody(requestId) {
 		const bodyResult = await this.cdp.send("Fetch.getResponseBody", { requestId });
 
@@ -125,5 +176,17 @@ module.exports = class Network extends EventEmitter {
 		} else {
 			throw error;
 		}
+	}
+
+	getWebSocketPayloadData(response) {
+		// https://chromedevtools.github.io/devtools-protocol/tot/Network/#type-WebSocketFrame
+		// payloadData
+		// string
+		// WebSocket message payload data. If the opcode is 1, this is a text message and payloadData is a UTF-8 string.
+		// If the opcode isn't 1, then payloadData is a base64 encoded string representing binary data.
+
+		return response.opcode === 1
+			? response.payloadData
+			: Buffer.from(response.payloadData, "base64");
 	}
 };
