@@ -1,6 +1,5 @@
 const { spawn } = require("child_process");
 const EventEmitter = require("events");
-const readline = require("readline");
 
 const _ = require("lodash");
 
@@ -16,25 +15,34 @@ const printDebugLog = typeof process.env.SIDER_DEBUG === "string" &&
 	process.env.SIDER_DEBUG.includes("browser");
 
 async function getWSEndpoint(browserProcess) {
-	return new Promise((resolve, reject) => {
-		const stdErrReader = readline.createInterface({ input: browserProcess.stderr });
+	return new Promise(resolve => {
+		const devToolsWsEndpointRegExp = /DevTools listening on (ws:\/\/.*)\r?\n/;
 
-		const handleOnLine = line => {
-			const match = line.match(/^DevTools listening on (ws:\/\/.*)$/);
-			if (!match) return;
+		let output = "";
 
-			stdErrReader.off("line", handleOnLine);
-			stdErrReader.off("close", reject);
-			stdErrReader.off("exit", reject);
-			stdErrReader.off("error", reject);
+		const handleBrowserProcessStdErrOnData = chunk => {
+			output += chunk.toString();
 
-			return resolve(match[1]);
+			const match = output.match(devToolsWsEndpointRegExp);
+			if (match) {
+				const url = match[1];
+
+				browserProcess.stderr.off("data", handleBrowserProcessStdErrOnData);
+				browserProcess.off("close", handleBrowserProcessOnClose);
+
+				return resolve(url);
+			}
 		};
 
-		stdErrReader.on("line", handleOnLine);
-		stdErrReader.on("close", reject);
-		stdErrReader.on("exit", reject);
-		stdErrReader.on("error", reject);
+		const handleBrowserProcessOnClose = () => {
+			browserProcess.stderr.off("data", handleBrowserProcessStdErrOnData);
+			browserProcess.off("close", handleBrowserProcessOnClose);
+
+			return resolve(null);
+		};
+
+		browserProcess.stderr.on("data", handleBrowserProcessStdErrOnData);
+		browserProcess.on("close", handleBrowserProcessOnClose);
 	});
 }
 
@@ -56,16 +64,15 @@ module.exports = class Browser extends EventEmitter {
 
 		this.browserProcess.on("close", this.processClosed.bind(this));
 
-		// TODO
-		// this.browserProcess.on("disconnect", () => {
-		// });
+		this.browserProcess.on("disconnect", () => {
+		});
 
-		// this.browserProcess.on("exit", (code, signal) => {
-		// });
+		this.browserProcess.on("exit", (code, signal) => {
+		});
 
-		// this.browserProcess.on("error", error => {
-		// 	throw error;
-		// });
+		this.browserProcess.on("error", error => {
+			throw error;
+		});
 
 		this.wsEndpoint = await getWSEndpoint(this.browserProcess);
 	}
