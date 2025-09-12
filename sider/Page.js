@@ -1,7 +1,5 @@
 const EventEmitter = require("events");
 
-const _ = require("lodash");
-
 const { tick, tickToMilliseconds } = require("./tools/time");
 const Frame = require("./Frame");
 const Input = require("./Input");
@@ -43,7 +41,7 @@ module.exports = class Page extends EventEmitter {
 					// NOTE ожидается, что frame должна быть, т.е. Page.frameAttached вызывается до Page.frameNavigated
 					// но иногда это не так
 					if (frame) {
-						_.assign(frame.info, params.frame);
+						Object.assign(frame.info, params.frame);
 
 						if (frame === this.mainFrame) {
 							this.emit("navigated");
@@ -239,7 +237,7 @@ module.exports = class Page extends EventEmitter {
 	async getCookies() {
 		const result = await this.cdp.send("Network.getCookies");
 
-		return _.get(result, "cookies", []);
+		return result.cookies || [];
 	}
 
 	async getScreenshot() {

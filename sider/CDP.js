@@ -1,7 +1,5 @@
 const EventEmitter = require("events");
 
-const ws = require("ws");
-
 const SiderError = require("./Error");
 const Target = require("./Target");
 
@@ -15,33 +13,80 @@ module.exports = class CDP extends EventEmitter {
 		this.browser = browser;
 		this.endpoint = endpoint;
 
+		this.handleWebSocketError = this.handleWebSocketError.bind(this);
+		this.handleWebSocketOpen = this.handleWebSocketOpen.bind(this);
+		this.handleWebSocketClose = this.handleWebSocketClose.bind(this);
+		this.handleWebSocketMessage = this.handleWebSocketMessage.bind(this);
+
 		if (printDebugLog) console.log(`Sider CDP ws: ${this.endpoint}`);
 	}
 
 	async initialize() {
-		this.ws = await new Promise((resolve, reject) => {
-			const webSocket = new ws(this.endpoint, [], {
-				followRedirects: true,
-				perMessageDeflate: false
-			});
+		this.ws = new WebSocket(this.endpoint);
 
-			webSocket.once("open", () => resolve(webSocket));
-			webSocket.once("error", reject);
-		});
+		this.subscribeOnWebSocketEvents();
 
-		this.ws.on("message", this.handleMessage.bind(this));
-
-		this.ws.on("close", code => {
-			this.emit("closed", code);
-		});
-
-		this.ws.on("error", () => {
-			// TODO
+		await new Promise((resolve, reject) => {
+			this.webSocketOpenPromiseResolve = resolve;
+			this.webSocketOpenPromiseReject = reject;
 		});
 
 		this.callbacks = new Map();
 		this.sessions = new Map();
 		this.sessions.set(undefined, this.rootSession = new CDPRootSession(this));
+	}
+
+	subscribeOnWebSocketEvents() {
+		this.ws.addEventListener("error", this.handleWebSocketError);
+		this.ws.addEventListener("open", this.handleWebSocketOpen);
+		this.ws.addEventListener("close", this.handleWebSocketClose);
+		this.ws.addEventListener("message", this.handleWebSocketMessage);
+	}
+
+	unsubscribeFromWebSocketEvents() {
+		this.ws.removeEventListener("error", this.handleWebSocketError);
+		this.ws.removeEventListener("open", this.handleWebSocketOpen);
+		this.ws.removeEventListener("close", this.handleWebSocketClose);
+		this.ws.removeEventListener("message", this.handleWebSocketMessage);
+	}
+
+	handleWebSocketError(event) {
+		this.unsubscribeFromWebSocketEvents();
+
+		if (this.webSocketOpenPromiseReject) {
+			this.webSocketOpenPromiseReject();
+
+			this.webSocketOpenPromiseResolve = undefined;
+			this.webSocketOpenPromiseReject = undefined;
+		}
+
+		this.emit("error");
+	}
+
+	handleWebSocketOpen(event) {
+		if (this.webSocketOpenPromiseResolve) {
+			this.webSocketOpenPromiseResolve();
+
+			this.webSocketOpenPromiseResolve = undefined;
+			this.webSocketOpenPromiseReject = undefined;
+		}
+	}
+
+	handleWebSocketClose(event) {
+		this.unsubscribeFromWebSocketEvents();
+
+		if (this.webSocketOpenPromiseReject) {
+			this.webSocketOpenPromiseReject();
+
+			this.webSocketOpenPromiseResolve = undefined;
+			this.webSocketOpenPromiseReject = undefined;
+		}
+
+		this.emit("closed", event.code);
+	}
+
+	handleWebSocketMessage(event) {
+		this.handleMessage(event.data);
 	}
 
 	async send({ method, sessionId, params }) {

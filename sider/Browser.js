@@ -1,8 +1,6 @@
 const { spawn } = require("child_process");
 const EventEmitter = require("events");
 
-const _ = require("lodash");
-
 const CDP = require("./CDP");
 const Page = require("./Page");
 const ServiceWorker = require("./ServiceWorker");
@@ -44,6 +42,14 @@ async function getWSEndpoint(browserProcess) {
 		browserProcess.stderr.on("data", handleBrowserProcessStdErrOnData);
 		browserProcess.on("close", handleBrowserProcessOnClose);
 	});
+}
+
+function getOptionValue(options, optionName, defaultValue = undefined) {
+	const optionValue = options[optionName];
+
+	return optionValue !== undefined
+		? optionValue
+		: defaultValue;
 }
 
 module.exports = class Browser extends EventEmitter {
@@ -278,18 +284,18 @@ module.exports = class Browser extends EventEmitter {
 	// OPTIONS
 
 	get optionEnableRuntime() {
-		return _.get(this.options, "enableRuntime", true);
+		return getOptionValue(this.options, "enableRuntime", true);
 	}
 
 	get optionHandleAuthRequests() {
-		return _.get(this.options, "handleAuthRequests", true);
+		return getOptionValue(this.options, "handleAuthRequests", true);
 	}
 
 	get optionHandleWebSocketRequests() {
-		return _.get(this.options, "handleWebSocketRequests", false);
+		return getOptionValue(this.options, "handleWebSocketRequests", false);
 	}
 
 	get optionHandleServiceWorkers() {
-		return _.get(this.options, "handleServiceWorkers", false);
+		return getOptionValue(this.options, "handleServiceWorkers", false);
 	}
 };
